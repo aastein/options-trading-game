@@ -14,8 +14,6 @@ from PySide6.QtCore import Signal
 class ControlsPanel(QWidget):
 
     new_game_clicked = Signal()
-    play_clicked = Signal()
-    pause_clicked = Signal()
     jump_to_next_open_clicked = Signal()
     jump_to_next_midday_clicked = Signal()
     jump_to_next_day_clicked = Signal()
@@ -23,8 +21,6 @@ class ControlsPanel(QWidget):
 
     def __init__(self):
         super().__init__()
-
-        self.is_playing = False
 
         self._init_ui()
 
@@ -54,11 +50,6 @@ class ControlsPanel(QWidget):
         layout.addWidget(self.new_game_btn)
 
         layout.addSpacing(20)
-
-        self.play_pause_btn = QPushButton("▶ Play")
-        self.play_pause_btn.setFixedWidth(100)
-        self.play_pause_btn.clicked.connect(self._on_play_pause_clicked)
-        layout.addWidget(self.play_pause_btn)
 
         speed_label = QLabel("Speed:")
         layout.addWidget(speed_label)
@@ -96,16 +87,6 @@ class ControlsPanel(QWidget):
 
         layout.addStretch()
 
-    def _on_play_pause_clicked(self) -> None:
-        self.is_playing = not self.is_playing
-
-        if self.is_playing:
-            self.play_pause_btn.setText("⏸ Pause")
-            self.play_clicked.emit()
-        else:
-            self.play_pause_btn.setText("▶ Play")
-            self.pause_clicked.emit()
-
     def _on_speed_changed(self, index: int) -> None:
         speeds = [1, 2, 5]
         self.speed_changed.emit(speeds[index])
@@ -113,6 +94,3 @@ class ControlsPanel(QWidget):
     def update_progress(self, progress: float) -> None:
         self.progress_bar.setValue(int(progress * 100))
 
-    def reset_play_button(self) -> None:
-        self.is_playing = False
-        self.play_pause_btn.setText("▶ Play")

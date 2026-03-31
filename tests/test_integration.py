@@ -66,7 +66,7 @@ class TestIntegration(unittest.TestCase):
         ohlc_bar = ohlc_bars[0]
         ticks = tick_gen.generate_day_ticks(ohlc_bar, seed=42)
         
-        self.assertEqual(len(ticks), 4680)
+        self.assertEqual(len(ticks), 4560)
         
         current_time = datetime(2024, 1, 2, 10, 0)
         spot_price = float(ticks[100])

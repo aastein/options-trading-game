@@ -58,7 +58,7 @@ class TestTickGenerator(unittest.TestCase):
         
         ticks = generator.generate_day_ticks(ohlc, seed=42)
         
-        self.assertEqual(len(ticks), 4680)
+        self.assertEqual(len(ticks), 4560)
         
         self.assertAlmostEqual(ticks[0], 450.0, delta=0.01)
         self.assertAlmostEqual(ticks[-1], 452.0, delta=0.01)

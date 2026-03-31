@@ -11,7 +11,7 @@ from typing import List
 faulthandler.enable()
 
 import numpy as np
-from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QPushButton, QSpinBox, QComboBox, QGroupBox, QHBoxLayout, QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QTimer
 
 from utils.config_loader import ConfigLoader
@@ -33,55 +33,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-class GameSetupDialog(QDialog):
-
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("Game Setup")
-        self.setModal(True)
-
-        self.ticker = "SPY"
-        self.starting_capital = 100000.0
-        self.start_date = datetime(2024, 1, 2)
-
-        self._init_ui()
-
-    def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-
-        self.setStyleSheet(DARK_THEME_STYLESHEET)
-
-        ticker_group = QGroupBox("Select Ticker")
-        ticker_layout = QHBoxLayout(ticker_group)
-
-        self.ticker_combo = QComboBox()
-        self.ticker_combo.addItems(["SPY", "QQQ", "IWM"])
-        ticker_layout.addWidget(self.ticker_combo)
-
-        layout.addWidget(ticker_group)
-
-        capital_group = QGroupBox("Starting Capital ($)")
-        capital_layout = QHBoxLayout(capital_group)
-
-        self.capital_spin = QSpinBox()
-        self.capital_spin.setMinimum(10000)
-        self.capital_spin.setMaximum(10000000)
-        self.capital_spin.setSingleStep(10000)
-        self.capital_spin.setValue(100000)
-        capital_layout.addWidget(self.capital_spin)
-
-        layout.addWidget(capital_group)
-
-        start_btn = QPushButton("Start Game")
-        start_btn.clicked.connect(self.accept)
-        layout.addWidget(start_btn)
-
-    def get_settings(self) -> tuple[str, float, datetime]:
-        ticker = self.ticker_combo.currentText()
-        capital = float(self.capital_spin.value())
-        return ticker, capital, self.start_date
 
 
 class GameEngine:
@@ -399,12 +350,9 @@ class OptionTradingGame:
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def run(self) -> None:
-        setup_dialog = GameSetupDialog()
-
-        if not setup_dialog.exec():
-            return
-
-        ticker, starting_capital, start_date = setup_dialog.get_settings()
+        ticker = "SPY"
+        starting_capital = 100000.0
+        start_date = datetime(2024, 1, 2)
 
         if not self.config_loader.check_config_exists(ticker):
             QMessageBox.critical(
@@ -426,6 +374,8 @@ class OptionTradingGame:
 
         self._update_ui()
 
+        self._restart_timer()
+
         self.main_window.show()
 
         sys.exit(self.app.exec())
@@ -436,8 +386,6 @@ class OptionTradingGame:
 
         controls = self.main_window.controls_panel
         controls.new_game_clicked.connect(self._on_new_game)
-        controls.play_clicked.connect(self._on_play)
-        controls.pause_clicked.connect(self._on_pause)
         controls.jump_to_next_open_clicked.connect(self._on_jump_next_open)
         controls.jump_to_next_midday_clicked.connect(self._on_jump_next_midday)
         controls.jump_to_next_day_clicked.connect(self._on_jump_next_day)
@@ -450,12 +398,11 @@ class OptionTradingGame:
         staging_panel = self.main_window.order_staging_panel
         staging_panel.orders_confirmed.connect(self._on_orders_confirmed)
 
-    def _on_play(self) -> None:
-        interval = int(5000 / self.game_engine.playback_speed)
-        self.timer.start(interval)
-
-    def _on_pause(self) -> None:
-        self.timer.stop()
+    def _restart_timer(self) -> None:
+        """Restart the playback timer at the current speed."""
+        if self.game_engine:
+            interval = int(5000 / self.game_engine.playback_speed)
+            self.timer.start(interval)
 
     def _on_timer_tick(self) -> None:
         if self.game_engine is None:
@@ -464,25 +411,26 @@ class OptionTradingGame:
         continues = self.game_engine.tick()
 
         if not continues:
-            self.timer.stop()
-            if self.main_window:
-                self.main_window.controls_panel.reset_play_button()
+            self._restart_timer()
 
         self._update_ui()
 
     def _on_jump_next_open(self) -> None:
         if self.game_engine:
             self.game_engine.jump_to_next_day_open()
+            self._restart_timer()
             self._update_ui()
 
     def _on_jump_next_midday(self) -> None:
         if self.game_engine:
             self.game_engine.jump_to_next_day_midday()
+            self._restart_timer()
             self._update_ui()
 
     def _on_jump_next_day(self) -> None:
         if self.game_engine:
             self.game_engine.jump_to_next_day()
+            self._restart_timer()
             self._update_ui()
 
     def _on_speed_changed(self, speed: int) -> None:
@@ -540,11 +488,7 @@ class OptionTradingGame:
                 executed += 1
 
         if self.main_window:
-            QMessageBox.information(
-                self.main_window,
-                "Orders Executed",
-                f"Successfully executed {executed} out of {len(staged_orders)} orders."
-            )
+            self.main_window.order_staging_panel.clear_all()
 
     def _update_ui(self) -> None:
         if self.main_window is None or self.game_engine is None:
