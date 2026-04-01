@@ -20,7 +20,7 @@ QPushButton {
     color: #ffffff;
     border: 1px solid #4a4a4a;
     border-radius: 4px;
-    padding: 5px;
+    padding: 3px;
 }
 
 QPushButton:hover {
@@ -43,7 +43,7 @@ QComboBox {
     color: #ffffff;
     border: 1px solid #4a4a4a;
     border-radius: 4px;
-    padding: 4px;
+    padding: 2px;
 }
 
 QComboBox:hover {
@@ -65,7 +65,7 @@ QSpinBox {
     color: #ffffff;
     border: 1px solid #4a4a4a;
     border-radius: 4px;
-    padding: 4px;
+    padding: 2px;
 }
 
 QProgressBar {
@@ -89,16 +89,16 @@ QGroupBox {
     background-color: #3a3a3a;
     border: 1px solid #4a4a4a;
     border-radius: 4px;
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: 4px;
+    padding-top: 4px;
     color: #ffffff;
     font-weight: bold;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 5px;
+    left: 6px;
+    padding: 0 3px;
 }
 
 QStatusBar {

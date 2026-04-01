@@ -26,7 +26,7 @@ class ControlsPanel(QWidget):
 
     def _init_ui(self) -> None:
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setContentsMargins(5, 2, 5, 2)
 
         self.new_game_btn = QPushButton("New Game")
         self.new_game_btn.setFixedWidth(100)
@@ -37,7 +37,7 @@ class ControlsPanel(QWidget):
                 color: #ffffff;
                 border: 1px solid #2a8f2a;
                 border-radius: 4px;
-                padding: 5px;
+                padding: 3px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -49,7 +49,7 @@ class ControlsPanel(QWidget):
         """)
         layout.addWidget(self.new_game_btn)
 
-        layout.addSpacing(20)
+        layout.addSpacing(10)
 
         speed_label = QLabel("Speed:")
         layout.addWidget(speed_label)
@@ -60,7 +60,7 @@ class ControlsPanel(QWidget):
         self.speed_combo.currentIndexChanged.connect(self._on_speed_changed)
         layout.addWidget(self.speed_combo)
 
-        layout.addSpacing(20)
+        layout.addSpacing(10)
 
         self.jump_open_btn = QPushButton("Opening")
         self.jump_open_btn.clicked.connect(self.jump_to_next_open_clicked.emit)
@@ -74,7 +74,7 @@ class ControlsPanel(QWidget):
         self.jump_next_day_btn.clicked.connect(self.jump_to_next_day_clicked.emit)
         layout.addWidget(self.jump_next_day_btn)
 
-        layout.addSpacing(20)
+        layout.addSpacing(10)
 
         progress_label = QLabel("Day Progress:")
         layout.addWidget(progress_label)
@@ -92,5 +92,12 @@ class ControlsPanel(QWidget):
         self.speed_changed.emit(speeds[index])
 
     def update_progress(self, progress: float) -> None:
+        """Update the day progress bar."""
         self.progress_bar.setValue(int(progress * 100))
+
+    def set_buttons_enabled(self, enabled: bool) -> None:
+        """Enable or disable jump buttons during background computation."""
+        self.jump_open_btn.setEnabled(enabled)
+        self.jump_midday_btn.setEnabled(enabled)
+        self.jump_next_day_btn.setEnabled(enabled)
 

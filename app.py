@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import signal
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List
 
@@ -12,7 +13,7 @@ faulthandler.enable()
 
 import numpy as np
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QTimer, QThread, Signal as QtSignal, QObject
 
 from utils.config_loader import ConfigLoader
 from utils.types import TickerConfig, OHLCBar, OptionQuote
@@ -32,6 +33,67 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DayAdvanceResult:
+    """Result of background day-advance computation."""
+
+    ticks: np.ndarray
+    tick_index: int
+    spot_price: float
+    current_time: datetime
+    option_chain: List[OptionQuote]
+
+
+class _DayAdvanceWorker(QObject):
+    """Runs tick generation and option chain generation off the main thread."""
+
+    finished = QtSignal(object)
+
+    def __init__(
+        self,
+        tick_generator: TickGenerator,
+        chain_generator: OptionChainGenerator,
+        ohlc_bar: OHLCBar,
+        seed: int,
+        target: str
+    ):
+        super().__init__()
+        self._tick_generator = tick_generator
+        self._chain_generator = chain_generator
+        self._ohlc_bar = ohlc_bar
+        self._seed = seed
+        self._target = target
+
+    def run(self) -> None:
+        """Execute expensive computation (called on worker thread)."""
+        ticks = self._tick_generator.generate_day_ticks(self._ohlc_bar, self._seed)
+
+        if self._target == "open":
+            tick_index = 0
+        elif self._target == "midday":
+            market_open = TradingCalendar.get_market_open(self._ohlc_bar.timestamp)
+            target_time = market_open.replace(hour=13, minute=0, second=0)
+            seconds_since_open = (target_time - market_open).total_seconds()
+            tick_index = min(int(seconds_since_open / 5), len(ticks) - 1)
+        else:
+            ticks_before_close = 120
+            tick_index = max(len(ticks) - ticks_before_close, 0)
+
+        spot_price = float(ticks[tick_index])
+        current_time = self._tick_generator.get_tick_timestamp(self._ohlc_bar, tick_index)
+
+        chain = self._chain_generator.generate_chain(spot_price, current_time)
+
+        result = DayAdvanceResult(
+            ticks=ticks,
+            tick_index=tick_index,
+            spot_price=spot_price,
+            current_time=current_time,
+            option_chain=chain
+        )
+        self.finished.emit(result)
 
 
 
@@ -68,6 +130,7 @@ class GameEngine:
         self.current_tick_index = 0
         self.current_time: datetime = start_date
         self.current_spot_price = 0.0
+        self._sub_tick = 0
 
         self.option_chain: List[OptionQuote] = []
         self._chain_cache_tick = -1
@@ -99,6 +162,8 @@ class GameEngine:
         self._start_new_day()
 
     def _start_new_day(self, target: str = "close") -> None:
+        """Start a new day synchronously (used during init and timer-driven end-of-day)."""
+        self._sub_tick = 0
         if self.current_day_index >= len(self.daily_ohlc):
             logger.info("Game complete - all 252 days played")
             return
@@ -117,8 +182,9 @@ class GameEngine:
             target_time = market_open.replace(hour=13, minute=0, second=0)
             seconds_since_open = (target_time - market_open).total_seconds()
             self.current_tick_index = min(int(seconds_since_open / 5), len(self.current_day_ticks) - 1)
-        else:  # close
-            self.current_tick_index = len(self.current_day_ticks) - 1
+        else:  # close — 10 minutes before market close
+            ticks_before_close = 120  # 600 seconds / 5 sec per tick
+            self.current_tick_index = max(len(self.current_day_ticks) - ticks_before_close, 0)
 
         self.current_spot_price = float(self.current_day_ticks[self.current_tick_index])
         self.current_time = self.tick_generator.get_tick_timestamp(ohlc_bar, self.current_tick_index)
@@ -129,27 +195,46 @@ class GameEngine:
 
         self.metrics_calculator.add_daily_value(self.portfolio_manager.get_total_value())
 
-        if target == "close":
-            close_time = TradingCalendar.get_market_close(ohlc_bar.timestamp)
-            self.portfolio_manager.handle_expiration(close_time, self.current_spot_price)
-            self.current_tick_index = len(self.current_day_ticks)  # Mark day as complete
+    def apply_day_results(self, result: DayAdvanceResult) -> None:
+        """Apply pre-computed day results from the background worker."""
+        self._sub_tick = 0
+        self.current_day_ticks = result.ticks
+        self.current_tick_index = result.tick_index
+        self.current_spot_price = result.spot_price
+        self.current_time = result.current_time
+        self.option_chain = result.option_chain
+        self._chain_cache_tick = self.current_tick_index
+        self._chain_cache_spot = self.current_spot_price
+
+        spot_prices = {self.ticker: self.current_spot_price}
+        self.portfolio_manager.update_positions(self.option_chain, spot_prices, self.current_time)
+        self.metrics_calculator.add_daily_value(self.portfolio_manager.get_total_value())
+
+        logger.info(f"Applied day {self.current_day_index + 1} results: {self.current_time}")
 
     def tick(self) -> bool:
+        """Advance the clock by 1 second. Every 5th call advances market data."""
         if self.current_tick_index >= len(self.current_day_ticks):
             self._end_day()
             return False
 
-        self.current_spot_price = float(self.current_day_ticks[self.current_tick_index])
+        self.current_time += timedelta(seconds=1)
+        self._sub_tick += 1
 
-        ohlc_bar = self.daily_ohlc[self.current_day_index]
-        self.current_time = self.tick_generator.get_tick_timestamp(ohlc_bar, self.current_tick_index)
+        if self._sub_tick >= 5:
+            self._sub_tick = 0
+            self.current_tick_index += 1
 
-        self._update_option_chain()
+            if self.current_tick_index >= len(self.current_day_ticks):
+                self._end_day()
+                return False
 
-        spot_prices = {self.ticker: self.current_spot_price}
-        self.portfolio_manager.update_positions(self.option_chain, spot_prices, self.current_time)
+            self.current_spot_price = float(self.current_day_ticks[self.current_tick_index])
 
-        self.current_tick_index += 1
+            self._update_option_chain()
+
+            spot_prices = {self.ticker: self.current_spot_price}
+            self.portfolio_manager.update_positions(self.option_chain, spot_prices, self.current_time)
 
         return True
 
@@ -162,7 +247,7 @@ class GameEngine:
         self.current_day_index += 1
 
         if self.current_day_index < len(self.daily_ohlc):
-            self._start_new_day()  # defaults to close
+            self._start_new_day(target="open")
 
     def _update_option_chain(self, force: bool = False) -> None:
         ticks_elapsed = self.current_tick_index - self._chain_cache_tick
@@ -192,7 +277,7 @@ class GameEngine:
             self.portfolio_manager.handle_expiration(close_time, close_price)
 
     def _advance_to_next_day(self, target: str = "close") -> None:
-        """Finalize current day and advance to next day at the given target."""
+        """Finalize current day and advance to next day synchronously."""
         self._finalize_current_day()
         self.current_day_index += 1
 
@@ -204,13 +289,27 @@ class GameEngine:
         self._start_new_day(target=target)
         logger.info(f"Advanced to next day ({target}): {self.current_time}")
 
+    def prepare_advance(self) -> bool:
+        """Finalize current day and increment index. Returns False if no more days."""
+        self._finalize_current_day()
+        self.current_day_index += 1
+
+        if self.current_day_index >= len(self.daily_ohlc):
+            logger.info("No more trading days")
+            self.current_day_index = len(self.daily_ohlc) - 1
+            return False
+        return True
+
     def jump_to_next_day_open(self) -> None:
+        """Synchronous jump (used only during timer-driven end-of-day)."""
         self._advance_to_next_day(target="open")
 
     def jump_to_next_day_midday(self) -> None:
+        """Synchronous jump (used only during timer-driven end-of-day)."""
         self._advance_to_next_day(target="midday")
 
     def jump_to_next_day(self) -> None:
+        """Synchronous jump (used only during timer-driven end-of-day)."""
         self._advance_to_next_day(target="close")
 
     def place_order(
@@ -294,31 +393,46 @@ class GameEngine:
             grouped[key].append(trade)
 
         for key, group in grouped.items():
-            if len(group) < 2:
+            opening_trades = [t for t in group if t['side'] in ('buy', 'sell')]
+            closing_trades = [t for t in group if t['side'] in ('expiration', 'assignment')]
+
+            if not opening_trades:
                 continue
 
-            first = group[0]
-            last = group[-1]
+            first = opening_trades[0]
+            entry_price = float(first['price'])
+            quantity = int(first['quantity'])
+            opening_side = first['side']
 
-            if first['side'] == 'sell':
-                entry_price = float(first['price'])
+            if closing_trades:
+                last = closing_trades[-1]
                 exit_price = float(last['price'])
-                quantity = int(first['quantity'])
-                side = 'sell'
-                pnl = (entry_price - exit_price) * quantity * 100
+                exit_time = last['timestamp']
+                exit_side = last['side']
+            elif len(group) >= 2 and group[-1] != first:
+                last = group[-1]
+                exit_price = float(last['price'])
+                exit_time = last['timestamp']
+                exit_side = last['side']
             else:
-                entry_price = float(first['price'])
-                exit_price = float(last['price'])
-                quantity = int(first['quantity'])
-                side = 'buy'
+                continue
+
+            if opening_side == 'sell':
+                pnl = (entry_price - exit_price) * quantity * 100
+                side = 'sell'
+            else:
                 pnl = (exit_price - entry_price) * quantity * 100
+                side = 'buy'
+
+            if exit_side in ('expiration', 'assignment'):
+                side = f"{side} ({exit_side})"
 
             pnl_pct = 0.0
             if entry_price > 0 and quantity > 0:
                 pnl_pct = (pnl / (entry_price * quantity * 100)) * 100
 
             trades.append({
-                'exit_time': last['timestamp'],
+                'exit_time': exit_time,
                 'ticker': first['ticker'],
                 'expiration': first['expiration'],
                 'strike': first['strike'],
@@ -328,7 +442,7 @@ class GameEngine:
                 'entry_price': entry_price,
                 'exit_price': exit_price,
                 'pnl': pnl,
-                'pnl_pct': pnl_pct
+                'pnl_pct': pnl_pct,
             })
 
         return trades
@@ -346,6 +460,10 @@ class OptionTradingGame:
 
         self.timer = QTimer()
         self.timer.timeout.connect(self._on_timer_tick)
+
+        self._worker_thread: QThread | None = None
+        self._worker: _DayAdvanceWorker | None = None
+        self._advancing = False
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -401,11 +519,14 @@ class OptionTradingGame:
     def _restart_timer(self) -> None:
         """Restart the playback timer at the current speed."""
         if self.game_engine:
-            interval = int(5000 / self.game_engine.playback_speed)
+            interval = int(1000 / self.game_engine.playback_speed)
             self.timer.start(interval)
 
     def _on_timer_tick(self) -> None:
-        if self.game_engine is None:
+        if self.game_engine is None or self._advancing:
+            return
+
+        if self.main_window and self.main_window.order_staging_panel.staged_orders:
             return
 
         continues = self.game_engine.tick()
@@ -415,30 +536,92 @@ class OptionTradingGame:
 
         self._update_ui()
 
+    def _has_staged_orders(self) -> bool:
+        """Check for staged orders and warn the user if any exist."""
+        if self.main_window and self.main_window.order_staging_panel.staged_orders:
+            QMessageBox.warning(
+                self.main_window,
+                "Staged Orders",
+                "You have staged orders. Confirm or clear them before advancing time.",
+            )
+            return True
+        return False
+
     def _on_jump_next_open(self) -> None:
         if self.game_engine:
-            self.game_engine.jump_to_next_day_open()
-            self._restart_timer()
-            self._update_ui()
+            if self._has_staged_orders():
+                return
+            self._start_async_advance("open")
 
     def _on_jump_next_midday(self) -> None:
         if self.game_engine:
-            self.game_engine.jump_to_next_day_midday()
-            self._restart_timer()
-            self._update_ui()
+            if self._has_staged_orders():
+                return
+            self._start_async_advance("midday")
 
     def _on_jump_next_day(self) -> None:
         if self.game_engine:
-            self.game_engine.jump_to_next_day()
-            self._restart_timer()
+            if self._has_staged_orders():
+                return
+            self._start_async_advance("close")
+
+    def _start_async_advance(self, target: str) -> None:
+        """Kick off day advance on a background thread."""
+        if not self.game_engine or self._advancing:
+            return
+
+        if not self.game_engine.prepare_advance():
             self._update_ui()
+            return
+
+        self._advancing = True
+        self.timer.stop()
+        if self.main_window:
+            self.main_window.controls_panel.set_buttons_enabled(False)
+
+        engine = self.game_engine
+        ohlc_bar = engine.daily_ohlc[engine.current_day_index]
+        seed = engine.current_day_index + int(time.time())
+
+        self._worker_thread = QThread()
+        self._worker = _DayAdvanceWorker(
+            engine.tick_generator,
+            engine.chain_generator,
+            ohlc_bar,
+            seed,
+            target
+        )
+        self._worker.moveToThread(self._worker_thread)
+        self._worker_thread.started.connect(self._worker.run)
+        self._worker.finished.connect(self._on_advance_finished, Qt.ConnectionType.QueuedConnection)
+        self._worker.finished.connect(self._worker_thread.quit)
+        self._worker_thread.finished.connect(self._cleanup_worker)
+        self._worker_thread.start()
+
+    def _on_advance_finished(self, result: DayAdvanceResult) -> None:
+        """Handle completion of background day-advance computation."""
+        if self.game_engine:
+            self.game_engine.apply_day_results(result)
+
+        self._advancing = False
+
+        if self.main_window:
+            self.main_window.controls_panel.set_buttons_enabled(True)
+
+        self._restart_timer()
+        self._update_ui()
+
+    def _cleanup_worker(self) -> None:
+        """Clean up worker and thread after thread has fully stopped."""
+        self._worker_thread = None
+        self._worker = None
 
     def _on_speed_changed(self, speed: int) -> None:
         if self.game_engine:
             self.game_engine.playback_speed = speed
 
             if self.timer.isActive():
-                interval = int(5000 / speed)
+                interval = int(1000 / speed)
                 self.timer.setInterval(interval)
 
     def _on_new_game(self) -> None:

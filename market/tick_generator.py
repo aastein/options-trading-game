@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class TickGenerator:
     
-    TICKS_PER_DAY = 4560
+    TICKS_PER_DAY = 4681
     
     def __init__(self, ticker_config: TickerConfig):
         self.ticker_config = ticker_config

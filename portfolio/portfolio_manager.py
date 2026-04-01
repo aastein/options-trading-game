@@ -195,6 +195,25 @@ class PortfolioManager:
                 else:
                     logger.info(f"Put expired OTM: {pos.ticker} {pos.strike}P")
 
+            is_itm = (
+                (pos.option_type == "call" and spot_price > pos.strike)
+                or (pos.option_type == "put" and spot_price < pos.strike)
+            )
+            exit_price = 0.0
+            if is_itm:
+                exit_price = abs(spot_price - pos.strike)
+
+            self.trade_history.append({
+                "timestamp": current_timestamp,
+                "ticker": pos.ticker,
+                "expiration": pos.expiration,
+                "strike": pos.strike,
+                "option_type": pos.option_type,
+                "side": "assignment" if is_itm else "expiration",
+                "quantity": abs(pos.quantity),
+                "price": exit_price,
+            })
+
             self.open_positions.remove(pos)
             self.closed_positions.append(pos)
 

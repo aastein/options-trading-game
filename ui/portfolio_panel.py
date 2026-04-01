@@ -42,7 +42,7 @@ class PortfolioPanel(QWidget):
 
         for label in [self.cash_label, self.total_value_label, self.unrealized_pnl_label,
                       self.total_pnl_label, self.roi_label, self.sharpe_label, self.max_dd_label]:
-            label.setStyleSheet("font-size: 11px; color: #ffffff;")
+            label.setStyleSheet("font-size: 9px; color: #ffffff;")
             metrics_layout.addWidget(label)
 
         metrics_group.setStyleSheet("""
@@ -50,15 +50,15 @@ class PortfolioPanel(QWidget):
                 background-color: #3a3a3a;
                 border: 1px solid #4a4a4a;
                 border-radius: 4px;
-                margin-top: 8px;
-                padding-top: 8px;
+                margin-top: 4px;
+                padding-top: 4px;
                 color: #ffffff;
                 font-weight: bold;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
+                left: 6px;
+                padding: 0 3px;
             }
         """)
 
@@ -67,12 +67,13 @@ class PortfolioPanel(QWidget):
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet("""
             QTabBar::tab {
-                min-height: 28px;
-                padding: 4px 12px;
+                min-height: 20px;
+                padding: 2px 6px;
                 background-color: #3a3a3a;
                 color: #888888;
                 border: 1px solid #4a4a4a;
-                margin-right: 2px;
+                margin-right: 1px;
+                font-size: 9px;
             }
             QTabBar::tab:selected {
                 background-color: #1a5f1a;
@@ -104,18 +105,18 @@ class PortfolioPanel(QWidget):
                 color: #ffffff;
                 gridline-color: #3a3a3a;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 11px;
+                font-size: 9px;
             }
             QTableWidget::item {
-                padding: 2px;
+                padding: 1px;
             }
             QHeaderView::section {
                 background-color: #3a3a3a;
                 color: #ffffff;
-                padding: 4px;
+                padding: 2px;
                 border: 1px solid #4a4a4a;
                 font-weight: bold;
-                font-size: 10px;
+                font-size: 8px;
             }
         """)
 
@@ -140,18 +141,18 @@ class PortfolioPanel(QWidget):
                 color: #ffffff;
                 gridline-color: #3a3a3a;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 11px;
+                font-size: 9px;
             }
             QTableWidget::item {
-                padding: 2px;
+                padding: 1px;
             }
             QHeaderView::section {
                 background-color: #3a3a3a;
                 color: #ffffff;
-                padding: 4px;
+                padding: 2px;
                 border: 1px solid #4a4a4a;
                 font-weight: bold;
-                font-size: 10px;
+                font-size: 8px;
             }
         """)
 
@@ -180,15 +181,15 @@ class PortfolioPanel(QWidget):
 
         unrealized_color = "green" if unrealized_pnl >= 0 else "red"
         self.unrealized_pnl_label.setText(f"Unrealized P&L: ${unrealized_pnl:,.2f}")
-        self.unrealized_pnl_label.setStyleSheet(f"font-size: 11px; color: {unrealized_color};")
+        self.unrealized_pnl_label.setStyleSheet(f"font-size: 9px; color: {unrealized_color};")
 
         pnl_color = "green" if total_pnl >= 0 else "red"
         self.total_pnl_label.setText(f"Total P&L: ${total_pnl:,.2f}")
-        self.total_pnl_label.setStyleSheet(f"font-size: 12px; color: {pnl_color}; font-weight: bold;")
+        self.total_pnl_label.setStyleSheet(f"font-size: 10px; color: {pnl_color}; font-weight: bold;")
 
         roi_color = "green" if roi >= 0 else "red"
         self.roi_label.setText(f"ROI: {roi:.2%}")
-        self.roi_label.setStyleSheet(f"font-size: 12px; color: {roi_color};")
+        self.roi_label.setStyleSheet(f"font-size: 10px; color: {roi_color};")
 
         self.sharpe_label.setText(f"Sharpe: {sharpe:.2f}")
         self.max_dd_label.setText(f"Max DD: {max_dd:.2%}")

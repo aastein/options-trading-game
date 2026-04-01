@@ -34,18 +34,18 @@ class OrderStagingPanel(QWidget):
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(2, 2, 2, 2)
 
         header_layout = QHBoxLayout()
 
         title_label = QLabel("Staged Orders")
-        title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff;")
+        title_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #ffffff;")
         header_layout.addWidget(title_label)
 
         header_layout.addStretch()
 
         self.summary_label = QLabel("Total: $0.00")
-        self.summary_label.setStyleSheet("font-size: 12px; color: #ffffff;")
+        self.summary_label.setStyleSheet("font-size: 10px; color: #ffffff;")
         header_layout.addWidget(self.summary_label)
 
         self.confirm_btn = QPushButton("Confirm Orders")
@@ -57,7 +57,7 @@ class OrderStagingPanel(QWidget):
                 color: #ffffff;
                 border: 1px solid #2a8f2a;
                 border-radius: 4px;
-                padding: 5px 15px;
+                padding: 3px 10px;
                 font-weight: bold;
             }
             QPushButton:hover:enabled {
@@ -83,7 +83,7 @@ class OrderStagingPanel(QWidget):
                 color: #ffffff;
                 border: 1px solid #A52A2A;
                 border-radius: 4px;
-                padding: 5px 15px;
+                padding: 3px 10px;
                 font-weight: bold;
             }
             QPushButton:hover:enabled {
@@ -122,18 +122,18 @@ class OrderStagingPanel(QWidget):
                 color: #ffffff;
                 gridline-color: #3a3a3a;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 11px;
+                font-size: 9px;
             }
             QTableWidget::item {
-                padding: 2px;
+                padding: 1px;
             }
             QHeaderView::section {
                 background-color: #3a3a3a;
                 color: #ffffff;
-                padding: 4px;
+                padding: 2px;
                 border: 1px solid #4a4a4a;
                 font-weight: bold;
-                font-size: 10px;
+                font-size: 8px;
             }
         """)
 

@@ -27,7 +27,7 @@ class TradeHistoryPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.summary_label = QLabel("No trades yet")
-        self.summary_label.setStyleSheet("color: #888888; padding: 4px; font-size: 11px;")
+        self.summary_label.setStyleSheet("color: #888888; padding: 2px; font-size: 9px;")
         layout.addWidget(self.summary_label)
 
         self.table = QTableWidget()
@@ -48,18 +48,18 @@ class TradeHistoryPanel(QWidget):
                 color: #ffffff;
                 gridline-color: #3a3a3a;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 11px;
+                font-size: 9px;
             }
             QTableWidget::item {
-                padding: 2px;
+                padding: 1px;
             }
             QHeaderView::section {
                 background-color: #3a3a3a;
                 color: #ffffff;
-                padding: 4px;
+                padding: 2px;
                 border: 1px solid #4a4a4a;
                 font-weight: bold;
-                font-size: 10px;
+                font-size: 8px;
             }
         """)
 

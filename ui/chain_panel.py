@@ -47,18 +47,19 @@ class ChainPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.status_label = QLabel("No chain data")
-        self.status_label.setStyleSheet("color: #888888; padding: 4px;")
+        self.status_label.setStyleSheet("color: #888888; padding: 2px; font-size: 9px;")
         layout.addWidget(self.status_label)
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet("""
             QTabBar::tab {
-                min-height: 28px;
-                padding: 4px 8px;
+                min-height: 20px;
+                padding: 2px 4px;
                 background-color: #3a3a3a;
                 color: #888888;
                 border: 1px solid #4a4a4a;
-                margin-right: 2px;
+                margin-right: 1px;
+                font-size: 9px;
             }
             QTabBar::tab:selected {
                 background-color: #1a5f1a;
@@ -71,6 +72,19 @@ class ChainPanel(QWidget):
             }
         """)
         layout.addWidget(self.tab_widget)
+
+    def _destroy_chain_widgets(self) -> None:
+        """Explicitly destroy all cell widgets in all tabs before clearing."""
+        for tab_idx in range(self.tab_widget.count()):
+            table = self.tab_widget.widget(tab_idx)
+            if not isinstance(table, QTableWidget):
+                continue
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    widget = table.cellWidget(row, col)
+                    if widget is not None:
+                        table.removeCellWidget(row, col)
+                        widget.deleteLater()
 
     def update_chain(self, chain: List[OptionQuote], spot_price: float, current_time: datetime | None = None) -> None:
         self.current_chain = chain
@@ -89,6 +103,7 @@ class ChainPanel(QWidget):
 
         if chain_hash != self._last_chain_hash:
             self._last_chain_hash = chain_hash
+            self._destroy_chain_widgets()
             self.tab_widget.clear()
 
             expirations = sorted(set(quote.expiration for quote in chain))
@@ -99,7 +114,7 @@ class ChainPanel(QWidget):
                 table = self._create_chain_table(exp_chain, expiration, spot_price)
 
                 dte = (expiration.date() - self.current_time.date()).days
-                tab_label = f"{expiration.strftime('%m/%d')} ({dte}d)"
+                tab_label = f"{expiration.strftime('%m/%d')}\n{dte}d"
 
                 self.tab_widget.addTab(table, tab_label)
 
@@ -122,7 +137,7 @@ class ChainPanel(QWidget):
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         table.verticalHeader().setVisible(False)
-        table.verticalHeader().setDefaultSectionSize(20)
+        table.verticalHeader().setDefaultSectionSize(14)
 
         table.setStyleSheet("""
             QTableWidget {
@@ -130,18 +145,18 @@ class ChainPanel(QWidget):
                 color: #ffffff;
                 gridline-color: #3a3a3a;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 11px;
+                font-size: 9px;
             }
             QTableWidget::item {
-                padding: 2px;
+                padding: 0px;
             }
             QHeaderView::section {
                 background-color: #3a3a3a;
                 color: #ffffff;
-                padding: 4px;
+                padding: 1px;
                 border: 1px solid #4a4a4a;
                 font-weight: bold;
-                font-size: 10px;
+                font-size: 8px;
             }
         """)
 
@@ -259,9 +274,9 @@ class ChainPanel(QWidget):
                 {bg_style}
                 color: #ff6666;
                 border: none;
-                padding: 1px;
+                padding: 0px;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 10px;
+                font-size: 8px;
                 text-align: center;
             }}
             QPushButton:hover {{
@@ -306,9 +321,9 @@ class ChainPanel(QWidget):
                 {bg_style}
                 color: #6699ff;
                 border: none;
-                padding: 1px;
+                padding: 0px;
                 font-family: 'SF Mono', Monaco, monospace;
-                font-size: 10px;
+                font-size: 8px;
                 text-align: center;
             }}
             QPushButton:hover {{

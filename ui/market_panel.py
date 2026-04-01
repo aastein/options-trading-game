@@ -34,7 +34,7 @@ class MarketPanel(QWidget):
         ticker_layout = QVBoxLayout(ticker_group)
 
         self.spot_label = QLabel("Spot: $0.00")
-        self.spot_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #ffffff;")
+        self.spot_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff;")
         ticker_layout.addWidget(self.spot_label)
 
         ticker_group.setStyleSheet("""
@@ -42,15 +42,15 @@ class MarketPanel(QWidget):
                 background-color: #3a3a3a;
                 border: 1px solid #4a4a4a;
                 border-radius: 4px;
-                margin-top: 8px;
-                padding-top: 8px;
+                margin-top: 4px;
+                padding-top: 4px;
                 color: #ffffff;
                 font-weight: bold;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
+                left: 6px;
+                padding: 0 3px;
             }
         """)
 
@@ -61,7 +61,7 @@ class MarketPanel(QWidget):
         intraday_layout.setContentsMargins(2, 2, 2, 2)
 
         self.intraday_chart = IntradayChartWidget()
-        self.intraday_chart.setMinimumHeight(300)
+        self.intraday_chart.setMinimumHeight(200)
         intraday_layout.addWidget(self.intraday_chart)
 
         intraday_group.setStyleSheet("""
@@ -69,15 +69,15 @@ class MarketPanel(QWidget):
                 background-color: #3a3a3a;
                 border: 1px solid #4a4a4a;
                 border-radius: 4px;
-                margin-top: 8px;
-                padding-top: 8px;
+                margin-top: 4px;
+                padding-top: 4px;
                 color: #ffffff;
                 font-weight: bold;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
+                left: 6px;
+                padding: 0 3px;
             }
         """)
 
@@ -88,7 +88,7 @@ class MarketPanel(QWidget):
         daily_layout.setContentsMargins(2, 2, 2, 2)
 
         self.daily_chart = DailyChartWidget()
-        self.daily_chart.setMinimumHeight(250)
+        self.daily_chart.setMinimumHeight(180)
         daily_layout.addWidget(self.daily_chart)
 
         daily_group.setStyleSheet("""
@@ -96,15 +96,15 @@ class MarketPanel(QWidget):
                 background-color: #3a3a3a;
                 border: 1px solid #4a4a4a;
                 border-radius: 4px;
-                margin-top: 8px;
-                padding-top: 8px;
+                margin-top: 4px;
+                padding-top: 4px;
                 color: #ffffff;
                 font-weight: bold;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
+                left: 6px;
+                padding: 0 3px;
             }
         """)
 

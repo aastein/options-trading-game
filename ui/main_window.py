@@ -78,24 +78,24 @@ class MainWindow(QMainWindow):
     def _create_status_bar(self) -> QWidget:
         status_widget = QWidget()
         status_layout = QHBoxLayout(status_widget)
-        status_layout.setContentsMargins(10, 5, 10, 5)
+        status_layout.setContentsMargins(5, 2, 5, 2)
 
         self.time_label = QLabel("Time: --:--")
-        self.time_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #ffffff;")
+        self.time_label.setStyleSheet("font-weight: bold; font-size: 11px; color: #ffffff;")
         status_layout.addWidget(self.time_label)
 
         status_layout.addStretch()
 
         self.portfolio_value_label = QLabel("Portfolio: $0.00")
-        self.portfolio_value_label.setStyleSheet("font-size: 14px; color: #ffffff;")
+        self.portfolio_value_label.setStyleSheet("font-size: 11px; color: #ffffff;")
         status_layout.addWidget(self.portfolio_value_label)
 
         self.pnl_label = QLabel("P&L: $0.00")
-        self.pnl_label.setStyleSheet("font-size: 14px; color: #ffffff;")
+        self.pnl_label.setStyleSheet("font-size: 11px; color: #ffffff;")
         status_layout.addWidget(self.pnl_label)
 
         self.margin_label = QLabel("Margin: $0.00 / $0.00")
-        self.margin_label.setStyleSheet("font-size: 14px; color: #ffffff;")
+        self.margin_label.setStyleSheet("font-size: 11px; color: #ffffff;")
         status_layout.addWidget(self.margin_label)
 
         status_widget.setStyleSheet("""
@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
 
         pnl_color = "green" if total_pnl >= 0 else "red"
         self.pnl_label.setText(f"P&L: ${total_pnl:,.2f}")
-        self.pnl_label.setStyleSheet(f"font-size: 14px; color: {pnl_color};")
+        self.pnl_label.setStyleSheet(f"font-size: 11px; color: {pnl_color};")
 
         self.margin_label.setText(
             f"Margin: ${required_margin:,.2f} / ${available_margin:,.2f}"

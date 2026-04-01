@@ -16,7 +16,7 @@ A standalone PySide6 application that generates realistic synthetic market data 
 ### 1. Create Virtual Environment
 
 ```bash
-cd /Users/aaron/github/aastein/option-trader-game
+cd option-trader-game
 python -m venv venv
 source venv/bin/activate
 ```
